@@ -32,7 +32,7 @@ const pool = new Pool(
 pool.connect();
 
 // -------------------- sql calls --------------------- //
-// ---------- get all entries from a field ---------- //
+// ---------- get all entries in a field ---------- //
 async function getEmployees() {    
     try {
         const result = await pool.query('SELECT employee FROM employees;');
@@ -89,6 +89,30 @@ async function addEmployee(name, role, department) {
     }
 }
 
+// ---------- update role on existing record ---------- //
+async function updateEmployeeRole(employeeName, newRole) {
+    const sql = `UPDATE employees
+    SET role_id = (
+        SELECT 
+            id
+        FROM
+            roles
+        WHERE
+            role = $1
+        ) 
+    WHERE
+        employee = $2;`
+    try {
+        const result = await pool.query(sql, [newRole, employeeName]);
+        console.log(`**********\nSuccesfully updated ${employeeName}'s role in employees_db.\n**********`);
+        setTimeout(promptUser, 2000);
+    } 
+    catch (err) {
+        console.error(`**********\nError querying the database.\n**********`);
+        throw err;
+    }
+}
+
 // ---------- receive and handle user input ---------- //
 function promptUser () {
     inquirer
@@ -98,13 +122,13 @@ function promptUser () {
                 message: questions[0],
                 type: 'list',
                 choices: [
-                    'View All EMPLOYEES', 
-                    'Add EMPLOYEE', 
-                    'Update EMPLOYEE Role', 
-                    'View All ROLES', 
-                    'Add ROLE', 
-                    'View All DEPARTMENTS', 
-                    'Add DEPARTMENT', 
+                    'View All Employees', 
+                    'Add Employee', 
+                    'Update Employee Role', 
+                    'View All Roles', 
+                    'Add Role', 
+                    'View All Departments', 
+                    'Add Department', 
                     'Quit'
                 ]
             }
@@ -117,12 +141,12 @@ function promptUser () {
 
 async function handleChoice(answer) {
     switch (answer) {
-        case 'View All EMPLOYEES':
+        case 'View All Employees':
             await getEmployees(employeeNames);
             console.table(employeeNames);
             setTimeout(promptUser, 2000);
             break;
-        case 'Add EMPLOYEE':
+        case 'Add Employee':
             await getRoles(roleNames)
             await getDepartments(departmentNames)
             inquirer
@@ -149,21 +173,42 @@ async function handleChoice(answer) {
                     const {employeeName, employeeRole, employeeDepartment } = response;
                     addEmployee(employeeName, employeeRole, employeeDepartment);
                 })
-            case 'Update EMPLOYEE Role':
-            break;
-        case 'View All ROLES':
+            case 'Update Employee Role':
+                await getEmployees(employeeNames)
+                await getRoles(roleNames)
+                inquirer
+                    .prompt ([
+                        {
+                            name: 'employeeName', 
+                            message: questions[4],
+                            type: 'list',
+                            choices: employeeNames
+                        },
+                        {
+                            name: 'employeeRole', 
+                            message: questions[5],
+                            type: 'list',
+                            choices: roleNames
+                        }
+                    ])
+                    .then ((response) => {
+                        const {employeeName, employeeRole} = response;
+                        updateEmployeeRole(employeeName, employeeRole);
+                    })
+                break;
+        case 'View All Roles':
                 await getRoles(roleNames);
                 console.table(roleNames);
                 setTimeout(promptUser, 2000);
                 break;
-            case 'Add ROLE':
+            case 'Add Role':
             break;
-        case 'View All DEPARTMENTS':
+        case 'View All Departments':
             await getDepartments(departmentNames);
             console.table(departmentNames);
             setTimeout(promptUser, 2000);
             break;
-        case 'Add DEPARTMENT':
+        case 'Add Department':
             break;
         case 'Quit':
             console.clear();
