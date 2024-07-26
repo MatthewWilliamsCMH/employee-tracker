@@ -56,7 +56,6 @@ async function getRoles() {
 }
 
 async function getDepartments() {  
-  
     try {
         const result = await pool.query('SELECT department FROM departments;');
         departmentNames = result.rows.map(row => row.department);
@@ -89,7 +88,6 @@ async function addEmployee(name, role, department) {
         throw err;
     }
 }
-
 
 // ---------- receive and handle user input ---------- //
 function promptUser () {
@@ -168,10 +166,11 @@ async function handleChoice(answer) {
         case 'Add DEPARTMENT':
             break;
         case 'Quit':
+            console.clear();
             break;
-        default:
-            console.log(`**********\nSorry. Something went wrong.\n**********`);
-            break;
+        // default:
+        //     console.log(`**********\nSorry. Something went wrong.\n**********`);
+        //     break;
     }
 }    
 
