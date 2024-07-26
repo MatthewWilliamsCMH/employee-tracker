@@ -5,6 +5,18 @@ let employeeNames = ""
 let roleNames = ""
 let departmentNames = ""
 let answer = ""
+let newEmployee = []
+const questions = [
+    `What would you like to do?`,
+    `What is the new employee's name?`,
+    `What is his or her role?`,
+    `What department will the new employee work?`,
+    `Which employee's role would you like to update?`,
+    `What role would you like to add?`,
+    `What department would you like to add?`,
+    `What is the new employee's role?`,
+    `What is the new employee's department?`
+];
 
 //connect to database
 const pool = new Pool(
@@ -19,6 +31,8 @@ const pool = new Pool(
   
 pool.connect();
 
+// -------------------- sql calls --------------------- //
+// ---------- get all entries from a field ---------- //
 async function getEmployees() {    
     try {
         const result = await pool.query('SELECT employee FROM employees;');
@@ -41,7 +55,8 @@ async function getRoles() {
     }
 }
 
-async function getDepartments() {    
+async function getDepartments() {  
+  
     try {
         const result = await pool.query('SELECT department FROM departments;');
         departmentNames = result.rows.map(row => row.department);
@@ -52,19 +67,32 @@ async function getDepartments() {
     }
 }
 
-//offer user action options
+// ---------- add record ---------- //
+async function addEmployee(name, role, department) {
+    const sql = `INSERT INTO employees (employee, role_id, department_id) 
+    SELECT 
+        $1 AS employee,
+        r.id AS role_id,
+        d.id AS department_id 
+    FROM 
+        roles r
+        JOIN departments d on d.department = $2
+    WHERE
+        r.role = $3`;
+    try {
+        const result = await pool.query(sql, [name, department, role]);
+        console.log(`**********\n${name} succesfully added to employees_db.\n**********`);
+        setTimeout(promptUser, 2000);
+    } 
+    catch (err) {
+        console.error(`**********\nError querying the database.\n**********`);
+        throw err;
+    }
+}
+
+
+// ---------- receive and handle user input ---------- //
 function promptUser () {
-    const questions = [
-        'What would you like to do?',
-        'What is the name of the new employee?',
-        'What is his or her role?',
-        'What department will the new employee work?',
-        'Which employee\'s role would you like to update?',
-        'What role would you like to add?',
-        'What department would you like to add?',
-        'What is the new employee\'s role?',
-        'What is the new employee\'s department?'
-    ];
     inquirer
         .prompt ([
             {
@@ -87,7 +115,7 @@ function promptUser () {
             answer = response.action;
             handleChoice(answer);
         })
-    }
+}
 
 async function handleChoice(answer) {
     switch (answer) {
@@ -97,9 +125,8 @@ async function handleChoice(answer) {
             setTimeout(promptUser, 2000);
             break;
         case 'Add EMPLOYEE':
-            const employeeRole = getRoles(roleNames)
-            console.log(roleNames)
-            const employeeDepartment = getDepartments(departmentNames)
+            await getRoles(roleNames)
+            await getDepartments(departmentNames)
             inquirer
                 .prompt ([
                     {
@@ -120,13 +147,11 @@ async function handleChoice(answer) {
                         choices: departmentNames
                     }
                 ])
-            /// rewrite this as a protected insertion
-                .then (() => {
-                    console.clear;
-                    sql = `INSERT INTO employees (role, department, name) VALUES (${results.employeeName}, ${results.employeeRole}, ${results.employeeDepartment})`
+                .then ((response) => {
+                    const {employeeName, employeeRole, employeeDepartment } = response;
+                    addEmployee(employeeName, employeeRole, employeeDepartment);
                 })
-                .then (() => loadPrompts());
-        case 'Update EMPLOYEE Role':
+            case 'Update EMPLOYEE Role':
             break;
         case 'View All ROLES':
                 await getRoles(roleNames);
@@ -145,198 +170,11 @@ async function handleChoice(answer) {
         case 'Quit':
             break;
         default:
-            console.log('Sorry. Something went wrong.');
+            console.log(`**********\nSorry. Something went wrong.\n**********`);
             break;
     }
 }    
-// ---------- get functions ---------- //
-// function getEmployees() {
-//     pool.query(sql, (error, result) =>{
-//         if (error) {
-//             console.error("Error exectuing query.", error.stack);
-//             return;
-//         }
-//         employeeNames = result.rows.map(row => row.employee)
-//     })
-//     loadPrompts()
-// }
 
-function getRoles() {
-    pool.query("SELECT role FROM Roles;", (error, result) =>{
-        if (error) {
-            console.error("Error exectuing query.", error.stack);
-            return;
-        }
-        const roleNames = result.rows.map(row => row.role)
-        return roleNames;
-    })
-    handleChoice()
-}
-
-function getDepartments() {
-    pool.query("SELECT department FROM departments;", (error, result) =>{
-        if (error) {
-            console.error("Error exectuing query.", error.stack);
-            return;
-        }
-        const departmentNames = result.rows.map(row => row.department)
-    })
-    promptUser();
-    handleChoice();
-}
-
-
-
-// app.get('/api/movies', (req, res) => {
-//     const sql = `SELECT id, movie_name AS title FROM movies`;
-
-//       if (err) {
-//         res.status(500).json({ error: err.message });
-//         return;
-//       }
-//       res.json({
-//         message: 'success',
-//         data: rows
-//       });
-//     });
-//   });
-  
-            // db.findAllEmployees()
-            //   .then(({ rows }) => {
-            //     let employees = rows;
-            //     console.log('\n');
-            //     console.table(employees);
-            //   })
-            //   .then(() => loadPrompts());
-
-        //   pool.query(
-        //     "SELECT employee.id, employee.first_name, employee.last_name, role.title, department.name AS department, role.salary, CONCAT(manager.first_name, ' ', manager.last_name) AS manager FROM employee LEFT JOIN role on employee.role_id = role.id LEFT JOIN department on role.department_id = department.id LEFT JOIN employee manager on manager.id = employee.manager_id;"
-        //   );
-
-
-
-
-            // const getNotes = () =>
-            // fetch('/api/notes', {
-            //   method: 'GET',
-            //   headers: {
-            //     'Content-Type': 'application/json'
-            //   }
-            // });
-          
-
-        // const getRoles = () => {
-        //     fetch('api/roles', {
-        //         method: 'GET',
-        //         headers: {
-        //             'Content-Type': 'application/json'
-        //         }
-        //     })
-        // }
-
-        // const getDepartments = () => {
-        //     fetch('api/departments', {
-        //         method: 'GET',
-        //         headers: {
-        //             'Content-Type': 'application/json'
-        //         }
-        //     })
-        // }
-
-
-
-
-        // .then((res) => fetch(`https://api.github.com/users/${res.username}`))
-        // // promises are chained to parse the request for the json data
-        // .then((res) => res.json())
-        // // json data is accepted as user and logged to the console
-        // .then((user) => console.log(user));
-      
-
-
-
-
-
-
-
-
-
-
-            // ,
-            //{ VIEW ALL EMPLOYEES
-            //select all employees from employees table
-            //},
-//             {
-//                 name: 'addemployee',
-//                 message: questions[1],
-//                 type: 'input',
-//                 when: (answers) => answers.action === 'Add New EMPLOYEE'
-//             },
-// //list of roles from db
-//             {
-//                 name: 'newemployeerole',
-//                 message: questions[5],
-//                 type: 'list',
-//                 choices: [
-//                     '1',
-//                     '2',
-//                     '3'
-//                 ],
-//                 when: (answers) => answers['addemployee']
-//             },
-// //list of departments from db,
-//             {
-//                 name: 'newemployeedepartment',
-//                 message: questions[6],
-//                 type: 'list',
-//                 choices: [
-//                     '1',
-//                     '2',
-//                     '3'
-//                 ],
-//                 when: (answers) => answers['newemployeerole']
-//             },
-// //SELECT * FROM employees
-//             {
-//                 name: 'updaterole',
-//                 message: questions[2],
-//                 type: 'list',
-//                 choices: [
-//                     '1',
-//                     '2',
-//                     '3'
-//                 ],
-//                 when: (answers) => answers[undaterole] = 'Update EMPLOYEE Role'
-//             },
-//             //{ VIEW ALL ROLLS
-//             //select all rolls from rolls table
-//             //},
-//             {
-//                 name: 'newrole',
-//                 message: questions[3],
-//                 type: 'input',
-//                 when: (answers) => answers[action] = 'Add New ROLL'
-//             },
-//             //{ VIEW ALL DEPARTMENTS
-//             //select all departments from departments table
-//             //},
-//             {
-//                 name: 'newdept',
-//                 message: questions[4],
-//                 type: 'input',
-//                 when: (answers) => answers[action] = 'Add New DEPARTMENT'
-//             }
-//         ])
-//         .then ((responses) => {
-//         //if answer 1, SELECT * FROM employees
-//         //if answer 2, INSERT newemployee INTO employees
-//         //if answer 3, UPDATE role OF employee FROM employees
-//         //if answer 4, SELECT * FROM roles
-//         //if answer 5, INSERT newrole INTO roles
-//         //if answer 6, SELECT * FROM departments
-//         //if answer 7, INSERT newdept INTO departments
-//         //if answer 8, quit else restart prompt
-//         })
-// }
-
+// run on launch
 promptUser();
+handleChoice();
