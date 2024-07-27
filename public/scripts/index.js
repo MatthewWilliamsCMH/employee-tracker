@@ -9,9 +9,10 @@ let newEmployee = []
 const questions = [
     `What would you like to do?`,
     `What is the new employee's name?`,
-    `What is his or her role?`,
-    `What department will the new employee work?`,
+    `What is the new employee's role?`,
+    `In what department will the new employee work?`,
     `Which employee's role would you like to update?`,
+    `What is employee's new role?`,
     `What role would you like to add?`,
     `What department would you like to add?`,
     `What is the new employee's role?`,
@@ -32,7 +33,7 @@ const pool = new Pool(
 pool.connect();
 
 // -------------------- sql calls --------------------- //
-// ---------- get all entries in a field ---------- //
+// ---------- get functions ---------- //
 async function getEmployees() {    
     try {
         const result = await pool.query('SELECT employee FROM employees;');
@@ -66,7 +67,7 @@ async function getDepartments() {
     }
 }
 
-// ---------- add record ---------- //
+// ---------- add functions ---------- //
 async function addEmployee(name, role, department) {
     const sql = `INSERT INTO employees (employee, role_id, department_id) 
     SELECT 
@@ -89,7 +90,35 @@ async function addEmployee(name, role, department) {
     }
 }
 
-// ---------- update role on existing record ---------- //
+async function addRole(newRole) {
+    console.log(newRole)
+    const sql = `INSERT INTO roles (role) VALUES ($1)`;
+    try {
+        const result = await pool.query(sql, [newRole]);
+        console.log(`**********\n${newRole} was succesfully added to the roles in employees_db.\n**********`);
+        setTimeout(promptUser, 2000);
+    } 
+    catch (err) {
+        console.error(`**********\nError querying the database.\n**********`);
+        throw err;
+    }
+}
+
+async function addDepartment(newDepartment) {
+    console.log(newDepartment)
+    const sql = `INSERT INTO departments (department) VALUES ($1)`;
+    try {
+        const result = await pool.query(sql, [newDepartment]);
+        console.log(`**********\n${newDepartment} was succesfully added to the departments in employees_db.\n**********`);
+        setTimeout(promptUser, 2000);
+    } 
+    catch (err) {
+        console.error(`**********\nError querying the database.\n**********`);
+        throw err;
+    }
+}
+
+// ---------- update functions ---------- //
 async function updateEmployeeRole(employeeName, newRole) {
     const sql = `UPDATE employees
     SET role_id = (
@@ -113,7 +142,7 @@ async function updateEmployeeRole(employeeName, newRole) {
     }
 }
 
-// ---------- receive and handle user input ---------- //
+// -------------------- receive and handle user input -------------------- //
 function promptUser () {
     inquirer
         .prompt ([
@@ -197,11 +226,24 @@ async function handleChoice(answer) {
                     })
                 break;
         case 'View All Roles':
-                await getRoles(roleNames);
-                console.table(roleNames);
-                setTimeout(promptUser, 2000);
-                break;
-            case 'Add Role':
+            await getRoles(roleNames);
+            console.table(roleNames);
+            setTimeout(promptUser, 2000);
+            break;
+        case 'Add Role':
+            inquirer
+                .prompt ([
+                    {
+                        name: 'roleName', 
+                        message: questions[6],
+                        type: 'input'
+                    }
+                ])
+                .then ((response) => {
+                    console.log(response)
+                    const {roleName} = response;
+                    addRole(roleName);
+                })
             break;
         case 'View All Departments':
             await getDepartments(departmentNames);
@@ -209,6 +251,19 @@ async function handleChoice(answer) {
             setTimeout(promptUser, 2000);
             break;
         case 'Add Department':
+            inquirer
+                .prompt ([
+                    {
+                        name: 'departmentName', 
+                        message: questions[7],
+                        type: 'input'
+                    }
+                ])
+                .then ((response) => {
+                    console.log(response)
+                    const {departmentName} = response;
+                    addDepartment(departmentName);
+                })
             break;
         case 'Quit':
             console.clear();
