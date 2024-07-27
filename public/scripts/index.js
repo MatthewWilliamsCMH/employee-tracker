@@ -1,11 +1,10 @@
 // ---------- declarations ---------- //
 const inquirer = require('inquirer');
-const { Pool } = require('pg'); //import pg and create pool
-let employeeNames = ""
-let roleNames = ""
-let departmentNames = ""
-let answer = ""
-let newEmployee = []
+const { Pool } = require('pg');
+let employeeNames = ''
+let roleNames = ''
+let departmentNames = ''
+let answer = ''
 const questions = [
     `What would you like to do?`,
     `What is the new employee's name?`,
@@ -91,7 +90,6 @@ async function addEmployee(name, role, department) {
 }
 
 async function addRole(newRole) {
-    console.log(newRole)
     const sql = `INSERT INTO roles (role) VALUES ($1)`;
     try {
         const result = await pool.query(sql, [newRole]);
@@ -202,6 +200,7 @@ async function handleChoice(answer) {
                     const {employeeName, employeeRole, employeeDepartment } = response;
                     addEmployee(employeeName, employeeRole, employeeDepartment);
                 })
+                break;
             case 'Update Employee Role':
                 await getEmployees(employeeNames)
                 await getRoles(roleNames)
@@ -266,14 +265,15 @@ async function handleChoice(answer) {
                 })
             break;
         case 'Quit':
-            console.clear();
+            console.log("\n**********\nServer is shutting down....\n**********")
+            setTimeout(() => process.exit(), 2000);
             break;
-        // default:
-        //     console.log(`**********\nSorry. Something went wrong.\n**********`);
-        //     break;
+        default:
+            console.log(`**********\nSorry. Something went wrong.\n**********`);
+            break;
     }
 }    
 
 // run on launch
+console.clear();
 promptUser();
-handleChoice();
