@@ -277,3 +277,8 @@ async function handleChoice(answer) {
 // run on launch
 console.clear();
 promptUser();
+
+// ---------- to do ---------- //
+// refactor code for effiency
+// separate different sql actions into modules for easier maintenance //
+// add color to prompts to make them easier to read in the console //
