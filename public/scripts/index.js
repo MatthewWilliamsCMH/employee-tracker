@@ -16,7 +16,8 @@ const questions = [
     `In what department will the new employee work?`,
     `What is the employee's role?`,
     `Which employee's role would you like to update?`,
-    `What will be the employee's new role?`
+    `What will be the employee's new role?`,
+    `What department houses the new role?`
 ];
 
 //connect to database
@@ -143,13 +144,13 @@ async function addDepartment(department_name, manager_id) {
     }
 }
 
-async function addRole(role_name, salary) {
+async function addRole(role_name, department_id, salary) {
     const sql = `
         INSERT INTO 
-            roles (role_name, salary) 
-        VALUES ($1, $2)`;
+            roles (role_name, department_id, salary) 
+        VALUES ($1, $2, $3)`;
     try {
-        const result = await pool.query(sql, [role_name, salary]);
+        const result = await pool.query(sql, [role_name, department_id, salary]);
         console.log(`**********\n${role_name} was succesfully added to the roles in employees_db.\n**********`);
         setTimeout(promptUser, 2000);
     } 
@@ -177,21 +178,32 @@ async function addEmployee(employee_first_name, employee_last_name, employee_dep
 }
 
 // ---------- update functions ---------- //
-async function updateEmployeeRole(full_name, newRole) {
-    const sql = `UPDATE employees
-    SET role_id = (
+async function updateEmployeeRole(employee_id, role_id) {
+    try {
+        const department_sql = `
         SELECT 
-            id
+            department_id
         FROM
             roles
         WHERE
-            rname = $1
-        ) 
-    WHERE
-        full_name = $2;`
-    try {
-        const result = await pool.query(sql, [newRole, ename]);
-        console.log(`**********\nSuccesfully updated ${ename}'s role in employees_db.\n**********`);
+            id = $1
+        ;`
+
+        const department_result = await pool.query(department_sql, [role_id]);
+        const department_id = department_result.rows[0].department_id;
+        
+        const update_sql = `
+        UPDATE 
+            employees
+        SET 
+            role_id = $1,
+            department_id = $2
+        WHERE
+            id = $3
+        `;
+        const update_result = await pool.query(update_sql, [role_id, department_id, employee_id]);
+        // const result = await pool.query(update_sql, [employee_id, role_id]);
+        console.log(`**********\nSuccesfully updated role in employees_db.\n**********`);
         setTimeout(promptUser, 2000);
     } 
     catch (err) {
@@ -269,6 +281,11 @@ async function handleChoice(answer) {
                 })
             break;
         case 'Add Role':
+            departmentNames = await getDepartments();
+            const filteredRoleDepartments = departmentNames.map(department => ({
+                name: department.department_name,
+                value: department.department_id
+            }));
             inquirer
                 .prompt ([
                     {
@@ -277,14 +294,20 @@ async function handleChoice(answer) {
                         type: 'input'
                     },
                     {
+                        name: 'roleDepartment',
+                        message: questions[11],
+                        type: 'list',
+                        choices: filteredRoleDepartments
+                    },
+                    {
                         name: 'salary',
                         message: questions[4],
                         type: 'input'
                     }
                 ])
                 .then ((response) => {
-                    const {roleName, salary} = response;
-                    addRole(roleName, salary);
+                    const {roleName, roleDepartment, salary} = response;
+                    addRole(roleName, roleDepartment, salary);
                 })
             break;
         case 'Add Employee':
@@ -330,14 +353,14 @@ async function handleChoice(answer) {
                 break;
         case 'Update Employee Role':
             employeeNames = await getEmployees();
-            const formattedEmployees = employeeNames.map(employee => ({
-                full_name: `${employee.first_name} ${employee.last_name}`,
-                value: employee.id
+            const filteredEmployees = employeeNames.map(employee => ({
+                name: `${employee.first_name} ${employee.last_name}`,
+                value: employee.employee_id
             }));
             roleNames = await getRoles();
-            const formattedRoles =  roleNames.map(role => ({
-                    name: role.rname,
-                    value: role.id
+            const filteredUpdateRoles =  roleNames.map(role => ({
+                    name: role.role_name,
+                    value: role.role_id
                 }))
             inquirer
                 .prompt ([
@@ -345,17 +368,18 @@ async function handleChoice(answer) {
                         name: 'employee', 
                         message: questions[9],
                         type: 'list',
-                        choices: formattedEmployees
+                        choices: filteredEmployees
                     },
                     {
                         name: 'role',
                         message: questions[10],
                         type: 'list',
-                        choices: formattedRoles
+                        choices: filteredUpdateRoles
                     }
                 ])
                 .then ((response) => {
                     const {employee, role} = response;
+                    console.log(employee)
                     updateEmployeeRole(employee, role);
                 })
             break;
