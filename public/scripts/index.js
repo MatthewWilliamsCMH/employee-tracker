@@ -61,14 +61,16 @@ async function getRoles() {
     try {
         const result = await pool.query(`
             SELECT 
-                roles.id, roles.role_name, roles.salary, departments.department_name
+                roles.id, roles.title, roles.salary, departments.department_name
             FROM 
                 roles
             JOIN 
-                departments ON roles.department_id = departments.id;`);
+                departments ON roles.department_id = departments.id
+            ;`
+        );
         const roleNames = result.rows.map(row => ({
             role_id: row.id,
-            role_name: row.role_name,
+            title: row.title,
             department_name: row.department_name,
             role_salary: row.salary
         }));
@@ -83,7 +85,7 @@ async function getEmployees() {
     try {
         const result = await pool.query(`
             SELECT 
-                employees.id, employees.employee_first_name, employees.employee_last_name, departments.department_name, roles.role_name, roles.salary, m.id AS manager_id, m.employee_first_name AS manager_first_name, m.employee_last_name AS manager_last_name
+                employees.id, employees.employee_first_name, employees.employee_last_name, departments.department_name, roles.title, roles.salary, m.id AS manager_id, m.employee_first_name AS manager_first_name, m.employee_last_name AS manager_last_name
             FROM 
                 employees
             JOIN 
@@ -91,13 +93,15 @@ async function getEmployees() {
             JOIN 
                 roles ON employees.role_id = roles.id
             LEFT JOIN
-                employees m ON departments.manager_id = m.id;`);
+                employees m ON departments.manager_id = m.id
+            ;`
+        );
                 employeeNames = result.rows.map(row => ({
                 employee_id: row.id,
                 first_name: row.employee_first_name,
                 last_name: row.employee_last_name,
                 deparment_name: row.department_name,
-                role_name: row.role_name,
+                title: row.title,
                 role_salary: row.salary,
                 manager_first_name: row.manager_first_name,
                 manager_last_name: row.manager_last_name
@@ -118,7 +122,9 @@ async function getManagers() {
             FROM 
                 employees 
             WHERE 
-                role_id = 5;`);
+                role_id = 5
+            ;`
+        );
 
         departmentManagers = result.rows.map(row => ({
             full_name: row.full_name,
@@ -136,7 +142,9 @@ async function addDepartment(department_name, manager_id) {
     const sql = `
         INSERT INTO 
             departments (department_name, manager_id) 
-        VALUES ($1, $2)`;
+        VALUES 
+            ($1, $2)
+        `;
     try {
         const result = await pool.query(sql, [department_name, manager_id]);
         console.log(`**********\n${department_name} was succesfully added to the departments in employees_db.\n**********`);
@@ -148,14 +156,16 @@ async function addDepartment(department_name, manager_id) {
     }
 }
 
-async function addRole(role_name, department_id, salary) {
+async function addRole(title, department_id, salary) {
     const sql = `
         INSERT INTO 
-            roles (role_name, department_id, salary) 
-        VALUES ($1, $2, $3)`;
+            roles (title, department_id, salary) 
+        VALUES 
+            ($1, $2, $3)
+        `;
     try {
-        const result = await pool.query(sql, [role_name, department_id, salary]);
-        console.log(`**********\n${role_name} was succesfully added to the roles in employees_db.\n**********`);
+        const result = await pool.query(sql, [title, department_id, salary]);
+        console.log(`**********\n${title} was succesfully added to the roles in employees_db.\n**********`);
         setTimeout(promptUser, 2000);
     } 
     catch (err) {
@@ -351,7 +361,7 @@ async function handleChoice(answer) {
             }));
             roleNames = await getRoles();
             filteredRoles = roleNames.map(role => ({
-                    name: role.role_name,
+                    name: role.title,
                     value: role.role_id
                 }))
             inquirer
@@ -392,7 +402,7 @@ async function handleChoice(answer) {
             }));
             roleNames = await getRoles();
             filteredRoles =  roleNames.map(role => ({
-                    name: role.role_name,
+                    name: role.title,
                     value: role.role_id
                 }))
             inquirer

@@ -26,16 +26,16 @@ CREATE TABLE roles (
 
 
 INSERT INTO employees (employee_first_name, employee_last_name, department_id, role_id)
-VALUES ('Connie', 'Geldis', 2, 5),
+VALUES ('Connie', 'Geldis', 6, 5),
        ('Deidra', 'Schwartz', 4, 6),
        ('Gary', 'Scott', 5, 4),
        ('Linda', 'Bayma', 1, 2),
        ('Marilyn', 'Phelps', 2, 1),
        ('Steve', 'Robb', 1, 2),
-       ('Tim', 'Richards', 3, 5),
-       ('Pat', 'Tonneman', 4, 5),
-       ('Joellen', 'Gohr', 1, 5),
-       ('John', 'Smith', 5, 5),
+       ('Tim', 'Richards', 6, 5),
+       ('Pat', 'Tonneman', 6, 5),
+       ('Joellen', 'Gohr', 6, 5),
+       ('John', 'Smith', 6, 5),
        ('Bruce', 'Johnson', 6, 7);
 
 INSERT INTO departments (department_name, manager_id)
@@ -46,7 +46,7 @@ VALUES ('Editorial', 9),
        ('Sales', 10),
        ('Administration', 11);
 
-INSERT INTO roles (role_name, department_id, salary)
+INSERT INTO roles (title, department_id, salary)
 VALUES ('Digital Specialist', 2, 60000),
        ('Editor', 1, 64000),
        ('Engineer', 3, 40000),
