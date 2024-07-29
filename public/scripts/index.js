@@ -5,7 +5,7 @@ let employeeNames = []
 let roleNames = []
 let departmentNames = []
 let filteredManagers = []
-let filteredDeparments = []
+let filteredDepartments = []
 let filteredRoles = []
 let answer = ''
 
@@ -17,7 +17,7 @@ const questions = [
     `What salary is this role paid?`,
     `What is the new employee's first name?`,
     `Last name?`,
-    `Who is the new employee's manager`,
+    `Who is the new employee's manager?`,
     `What is the new employee's role?`,
     `Which employee's role would you like to update?`,
     `What will be the employee's new role?`,
@@ -85,22 +85,30 @@ async function getEmployees() {
     try {
         const result = await pool.query(`
             SELECT 
-                employees.id, employees.employee_first_name, employees.employee_last_name, departments.department_name, roles.title, roles.salary, m.id AS manager_id, m.employee_first_name AS manager_first_name, m.employee_last_name AS manager_last_name
+                e.id, 
+                e.employee_first_name, 
+                e.employee_last_name, 
+                e.manager_id, 
+                d.department_name, 
+                r.title, 
+                r.salary, 
+                m.employee_first_name AS manager_first_name,
+                m.employee_last_name AS manager_last_name
             FROM 
-                employees
+                employees e
             JOIN 
-                departments ON employees.department_id = departments.id
+                roles r ON e.role_id = r.id
             JOIN 
-                roles ON employees.role_id = roles.id
+                departments d ON r.department_id = d.id
             LEFT JOIN
-                employees m ON departments.manager_id = m.id
+                employees m ON e.manager_id = m.id
             ;`
-        );
+            );
                 employeeNames = result.rows.map(row => ({
                 employee_id: row.id,
                 first_name: row.employee_first_name,
                 last_name: row.employee_last_name,
-                deparment_name: row.department_name,
+                department_name: row.department_name,
                 title: row.title,
                 role_salary: row.salary,
                 manager_first_name: row.manager_first_name,
@@ -175,41 +183,20 @@ async function addRole(title, department_id, salary) {
 }
 
 async function addEmployee(employee_first_name, employee_last_name, employee_manager_id, employee_role_id) {
-    const get_department_id_sql = `
-        SELECT
-            department_id
-        FROM
-            employees
-        WHERE
-            id = $1;
-    `;
     const insertion_sql = `
         INSERT INTO
             employees (
                 employee_first_name,
                 employee_last_name,
-                department_id,
+                manager_id,
                 role_id
             )
-        SELECT
-            $1 AS employee_first_name,
-            $2 AS employee_last_name,
-            d.id AS department_id, 
-            $4 AS role_id
-        FROM
-            (SELECT id FROM employees WHERE id = $3) d
-        JOIN
-            roles ON department_id = roles.department_id
-        WHERE 
-            roles.id = $4;
-    `;
-
+        VALUES ($1, $2, $3, $4)
+        ;`
+    ;
     try {
 
-        const result = await pool.query(get_department_id_sql, [employee_manager_id]);
-        const department_id = result.rows[0].department_id;
-
-        await pool.query(insertion_sql, [employee_first_name, employee_last_name, employee_manager_id, employee_role_id]);
+        newResult = await pool.query(insertion_sql, [employee_first_name, employee_last_name, employee_manager_id, employee_role_id]);
 
         console.log(`**********\n${employee_first_name} ${employee_last_name} succesfully added to employees_db.\n**********`);
         setTimeout(promptUser, 2000);
@@ -223,29 +210,15 @@ async function addEmployee(employee_first_name, employee_last_name, employee_man
 // ---------- update functions ---------- //
 async function updateEmployeeRole(employee_id, role_id) {
     try {
-        const department_sql = `
-        SELECT 
-            department_id
-        FROM
-            roles
-        WHERE
-            id = $1
-        ;`
-
-        const department_result = await pool.query(department_sql, [role_id]);
-        const department_id = department_result.rows[0].department_id;
-        
         const update_sql = `
         UPDATE 
             employees
         SET 
-            role_id = $1,
-            department_id = $2
+            role_id = $1
         WHERE
-            id = $3
+            id = $2
         `;
-        const update_result = await pool.query(update_sql, [role_id, department_id, employee_id]);
-        // const result = await pool.query(update_sql, [employee_id, role_id]);
+        const update_result = await pool.query(update_sql, [role_id, employee_id]);
         console.log(`**********\nSuccesfully updated role in employees_db.\n**********`);
         setTimeout(promptUser, 2000);
     } 
