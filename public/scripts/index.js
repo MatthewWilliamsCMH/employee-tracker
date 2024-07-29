@@ -4,7 +4,11 @@ const { Pool } = require('pg');
 let employeeNames = []
 let roleNames = []
 let departmentNames = []
+let filteredManagers = []
+let filteredDeparments = []
+let filteredRoles = []
 let answer = ''
+
 const questions = [
     `What would you like to do?`,
     `What department would you like to add?`,
@@ -13,8 +17,8 @@ const questions = [
     `What salary is this role paid?`,
     `What is the new employee's first name?`,
     `Last name?`,
-    `In what department will the new employee work?`,
-    `What is the employee's role?`,
+    `Who is the new employee's manager`,
+    `What is the new employee's role?`,
     `Which employee's role would you like to update?`,
     `What will be the employee's new role?`,
     `What department houses the new role?`
@@ -160,14 +164,43 @@ async function addRole(role_name, department_id, salary) {
     }
 }
 
-async function addEmployee(employee_first_name, employee_last_name, employee_department, employee_role) {
-    const sql = `
-    INSERT INTO
-        employees (employee_first_name, employee_last_name, department_id, role_id)
-    VALUES
-        ($1, $2, $3, $4);`;
+async function addEmployee(employee_first_name, employee_last_name, employee_manager_id, employee_role_id) {
+    const get_department_id_sql = `
+        SELECT
+            department_id
+        FROM
+            employees
+        WHERE
+            id = $1;
+    `;
+    const insertion_sql = `
+        INSERT INTO
+            employees (
+                employee_first_name,
+                employee_last_name,
+                department_id,
+                role_id
+            )
+        SELECT
+            $1 AS employee_first_name,
+            $2 AS employee_last_name,
+            d.id AS department_id, 
+            $4 AS role_id
+        FROM
+            (SELECT id FROM employees WHERE id = $3) d
+        JOIN
+            roles ON department_id = roles.department_id
+        WHERE 
+            roles.id = $4;
+    `;
+
     try {
-        const result = await pool.query(sql, [employee_first_name, employee_last_name, employee_department, employee_role]);
+
+        const result = await pool.query(get_department_id_sql, [employee_manager_id]);
+        const department_id = result.rows[0].department_id;
+
+        await pool.query(insertion_sql, [employee_first_name, employee_last_name, employee_manager_id, employee_role_id]);
+
         console.log(`**********\n${employee_first_name} ${employee_last_name} succesfully added to employees_db.\n**********`);
         setTimeout(promptUser, 2000);
     } 
@@ -257,7 +290,7 @@ async function handleChoice(answer) {
             break;
         case 'Add Department':
             departmentManagers = await getManagers();
-            const filteredManagers = departmentManagers.map(manager => ({
+            filteredManagers = departmentManagers.map(manager => ({
                 name: manager.full_name,
                 value: manager.employee_id
             }));
@@ -282,7 +315,7 @@ async function handleChoice(answer) {
             break;
         case 'Add Role':
             departmentNames = await getDepartments();
-            const filteredRoleDepartments = departmentNames.map(department => ({
+            filteredDepartments = departmentNames.map(department => ({
                 name: department.department_name,
                 value: department.department_id
             }));
@@ -297,7 +330,7 @@ async function handleChoice(answer) {
                         name: 'roleDepartment',
                         message: questions[11],
                         type: 'list',
-                        choices: filteredRoleDepartments
+                        choices: filteredDepartments
                     },
                     {
                         name: 'salary',
@@ -311,13 +344,13 @@ async function handleChoice(answer) {
                 })
             break;
         case 'Add Employee':
-            departmentNames = await getDepartments();
-            const filteredDepartments = departmentNames.map(department => ({
-                name: department.department_name,
-                value: department.department_id
+            departmentManagers = await getManagers();
+            filteredManagers = departmentManagers.map(manager => ({
+                name: manager.full_name,
+                value: manager.employee_id
             }));
             roleNames = await getRoles();
-            const filteredRoles = roleNames.map(role => ({
+            filteredRoles = roleNames.map(role => ({
                     name: role.role_name,
                     value: role.role_id
                 }))
@@ -334,10 +367,10 @@ async function handleChoice(answer) {
                         type: 'input'
                     },
                     {
-                        name: 'employeeDepartment', 
+                        name: 'employeeManager', 
                         message: questions[7],
                         type: 'list',
-                        choices: filteredDepartments
+                        choices: filteredManagers
                     },
                     {
                         name: 'employeeRole', 
@@ -347,8 +380,8 @@ async function handleChoice(answer) {
                     }
                 ])
                 .then ((response) => {
-                    const {employeeFirstName, employeeLastName, employeeDepartment, employeeRole} = response;
-                    addEmployee(employeeFirstName, employeeLastName, employeeDepartment, employeeRole);
+                    const {employeeFirstName, employeeLastName, employeeManager, employeeRole} = response;
+                    addEmployee(employeeFirstName, employeeLastName, employeeManager, employeeRole);
                 })
                 break;
         case 'Update Employee Role':
@@ -358,7 +391,7 @@ async function handleChoice(answer) {
                 value: employee.employee_id
             }));
             roleNames = await getRoles();
-            const filteredUpdateRoles =  roleNames.map(role => ({
+            filteredRoles =  roleNames.map(role => ({
                     name: role.role_name,
                     value: role.role_id
                 }))
@@ -374,7 +407,7 @@ async function handleChoice(answer) {
                         name: 'role',
                         message: questions[10],
                         type: 'list',
-                        choices: filteredUpdateRoles
+                        choices: filteredRoles
                     }
                 ])
                 .then ((response) => {
