@@ -395,7 +395,6 @@ async function handleChoice(answer) {
                 ])
                 .then ((response) => {
                     const {employee, role} = response;
-                    console.log(employee)
                     updateEmployeeRole(employee, role);
                 })
             break;
